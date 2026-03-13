@@ -1147,7 +1147,21 @@ function showReturningScreen(name, sub){
     if(nickSpan) nickSpan.textContent = name;
     contBtn.onclick = async ()=>{
       playClick();
-      if(window._nitoqoUser){ try{ await loadFromSupabase(); }catch(e){} }
+      if(window._nitoqoUser){
+        try{ await loadFromSupabase(); }catch(e){}
+        // Обновляем catClickCount из свежих данных Supabase
+        try{
+          const _freshSave = loadState();
+          if(_freshSave && _freshSave.catClicks > 0){
+            catClickCount = _freshSave.catClicks;
+            window._catClicks = catClickCount;
+            if(catClickCount >= 100 && !catNameGiven){ catNameGiven = true; }
+          }
+          if(window._catName && typeof updateCatNameLabel==='function'){
+            setTimeout(()=> updateCatNameLabel(), 900);
+          }
+        }catch(e){}
+      }
       enterMain(name);
     };
   }
