@@ -276,16 +276,7 @@ body.theme-ash #bg-dice2.rolling-enemy{border-color:rgba(136,136,144,.65);box-sh
 #cat-speech.sleeping{border-color:#a78bfa;color:#a78bfa;font-size:18px}
 @keyframes catShake{0%,100%{transform:translateX(0) rotate(0)}15%{transform:translateX(-7px) rotate(-4deg)}30%{transform:translateX(7px) rotate(4deg)}45%{transform:translateX(-5px) rotate(-2deg)}60%{transform:translateX(5px) rotate(2deg)}75%{transform:translateX(-3px)}90%{transform:translateX(3px)}}
 #cat-char.shaking{animation:catShake .5s ease forwards}
-#entry-quick-settings{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:12px;opacity:0;transition:opacity 1s ease .5s;pointer-events:none}
-#entry-quick-settings.visible{opacity:1;pointer-events:auto}
-.eq-row{display:flex;align-items:center;gap:10px;font-family:'Caveat',cursive;font-size:13px;color:rgba(var(--thread-rgb),.3);letter-spacing:.1em;white-space:nowrap}
-.eq-slider{-webkit-appearance:none;appearance:none;width:90px;height:2px;background:rgba(var(--thread-rgb),.2);border-radius:2px;outline:none;cursor:pointer}
-.eq-slider::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;background:rgba(var(--thread-rgb),.5);border-radius:50%;cursor:pointer;transition:background .2s}
-.eq-slider::-webkit-slider-thumb:hover{background:var(--thread)}
-.eq-theme-dots{display:flex;gap:8px}
-.eq-dot{width:14px;height:14px;border-radius:50%;cursor:pointer;border:1px solid rgba(255,255,255,.15);transition:transform .2s,border-color .2s;flex-shrink:0}
-.eq-dot:hover{transform:scale(1.3)}
-.eq-dot.active{border-color:rgba(255,255,255,.5);box-shadow:0 0 6px currentColor}
+
 #site-version{position:fixed;top:14px;right:14px;z-index:9500;font-family:'Caveat',cursive;font-size:13px;color:rgba(var(--thread-rgb),.22);letter-spacing:.1em;pointer-events:none;opacity:1}</style> </head> <body> <div id="poppy-meadow"><canvas id="poppy-canvas"></canvas></div> <canvas id="rain-canvas"></canvas> <canvas id="spark-canvas"></canvas> <canvas id="particles-canvas"></canvas> <div id="cursor-trail"></div> <div id="sound-control-panel">
   <div class="scp-track" id="scp-music"><div class="scp-canvas-wrap"><canvas class="scp-canvas" id="scp-cv-music"></canvas></div></div>
   <div class="scp-track" id="scp-rain"><div class="scp-canvas-wrap"><canvas class="scp-canvas" id="scp-cv-rain"></canvas></div></div>
@@ -317,25 +308,6 @@ body.theme-ash #bg-dice2.rolling-enemy{border-color:rgba(136,136,144,.65);box-sh
       </button>
     </div>
     <div id="auth-loading" style="display:none;font-family:'Caveat',cursive;font-size:15px;color:rgba(var(--thread-rgb),.4);letter-spacing:.1em;margin-top:20px">загрузка...</div>
-  </div>
-  <!-- быстрые настройки на экране входа -->
-  <div id="entry-quick-settings">
-    <div class="eq-row">
-      <span>♪</span>
-      <input type="range" class="eq-slider" id="eq-music-vol" min="0" max="100" value="50" oninput="eqSetVol('music',this.value)">
-      <span>fx</span>
-      <input type="range" class="eq-slider" id="eq-fx-vol" min="0" max="100" value="100" oninput="eqSetVol('fx',this.value)">
-    </div>
-    <div class="eq-row">
-      <span style="font-size:11px;letter-spacing:.15em">тема</span>
-      <div class="eq-theme-dots">
-        <div class="eq-dot active" id="eq-dot-default" style="background:#8b3a2a;color:#c9524a" title="ред" onclick="eqSetTheme('default',this)"></div>
-        <div class="eq-dot" id="eq-dot-teal" style="background:#2a6b7a;color:#4ab8c9" title="чай" onclick="eqSetTheme('teal',this)"></div>
-        <div class="eq-dot" id="eq-dot-ash" style="background:#5a5a5a;color:#b0b0b8" title="пепел" onclick="eqSetTheme('ash',this)"></div>
-      </div>
-    </div>
-  </div>
-  <div style="display:none">
   </div>
   <div id="nickname-screen" style="display:none;flex-direction:column;align-items:center;gap:16px">
     <div style="font-family:'Caveat',cursive;font-size:clamp(18px,3vw,26px);color:rgba(var(--thread-rgb),.7);letter-spacing:.2em">как тебя зовут?</div>
@@ -1073,115 +1045,17 @@ function enterMain(nickname){
   },1200);
 }
 
-// Функции быстрых настроек на экране входа
-window.eqSetVol = function(type, val){
-  const v = val / 100;
-  if(type === 'music'){
-    window._scpMusicVol = v;
-    window._musicVol = v;
-    if(window._bgGain) window._bgGain.gain.value = v * (window._allMuted ? 0 : 1);
-    if(typeof audio !== 'undefined' && audio){
-      const targetVol = typeof getMusicVol === 'function' ? getMusicVol(currentMusicSrc) : v * 0.6;
-      audio.volume = targetVol;
-      if(v > 0.01 && audio.paused){
-        audio.preload = 'auto';
-        audio.play().catch(()=>{});
-      } else if(v <= 0.01){
-        audio.pause();
-      }
-    }
-  } else {
-    window._scpFxVol = v;
-    window._fxVol = v;
-    window._fxVolMul = v;
-    window.fxOn = v > 0.001;
-  }
-};
-window.eqSetTheme = function(theme, el){
-  document.querySelectorAll('.eq-dot').forEach(d=>d.classList.remove('active'));
-  if(el) el.classList.add('active');
-  document.body.className = theme === 'default' ? '' : 'theme-'+theme;
-  window._currentTheme = theme;
-  // Переключить музыку под тему
-  const newSrc = theme === 'teal' ? MUSIC_TEAL : theme === 'ash' ? MUSIC_ASH : MUSIC_DEFAULT;
-  if(typeof switchMusic === 'function' && typeof soundOn !== 'undefined'){
-    // Уже в основном режиме — через switchMusic
-    if(newSrc !== currentMusicSrc) switchMusic(newSrc);
-  } else if(typeof audio !== 'undefined' && audio){
-    // Экран входа — прямой старт (клик = жест пользователя, autoplay разрешён)
-    const mv = window._scpMusicVol !== undefined ? window._scpMusicVol : 0.5;
-    audio.preload = 'auto';
-    audio.src = newSrc;
-    currentMusicSrc = newSrc;
-    audio.volume = mv * 0.6;
-    audio.play().catch(()=>{});
-  }
-  if(typeof saveState === 'function') saveState();
-};
-function initEntryQuickSettings(){
-  const qs = document.getElementById('entry-quick-settings');
-  if(!qs) return;
+// Применить сохранённую тему на экране входа
+function applyEntryTheme(){
   try{
     const _save = loadState() || {};
-    const mv = _save.musicVol !== undefined ? _save.musicVol : 0.5;
-    const fv = _save.fxVol !== undefined ? _save.fxVol : 1.0;
     const th = _save.theme || 'default';
-
-    // Применить тему сразу
     document.body.className = th === 'default' ? '' : 'theme-' + th;
     window._currentTheme = th;
-
-    // Выставить ползунки
-    const mi = document.getElementById('eq-music-vol');
-    const fi = document.getElementById('eq-fx-vol');
-    if(mi) mi.value = Math.round(mv * 100);
-    if(fi) fi.value = Math.round(fv * 100);
-
-    // Активная точка темы
-    document.querySelectorAll('.eq-dot').forEach(d => d.classList.remove('active'));
-    const dot = document.getElementById('eq-dot-' + th);
-    if(dot) dot.classList.add('active');
-
-    // Установить правильный трек под тему
-    const themeSrc = th === 'teal' ? MUSIC_TEAL : th === 'ash' ? MUSIC_ASH : MUSIC_DEFAULT;
-    currentMusicSrc = themeSrc;
-
-    // Синхронизировать FX
-    window._scpMusicVol = mv;
-    window._scpFxVol = fv;
-    window._fxVolMul = fv;
-    window.fxOn = fv > 0.001;
-
-    // Музыка — запустить при первом взаимодействии пользователя
-    if(typeof audio !== 'undefined' && audio){
-      audio.preload = 'auto';
-      audio.src = themeSrc;
-      const targetVol = mv * 0.6;
-      audio.volume = targetVol;
-
-      const tryPlay = ()=>{
-        if(audio.paused && mv > 0.01){
-          audio.play().catch(()=>{});
-        }
-        document.removeEventListener('click', tryPlay);
-        document.removeEventListener('keydown', tryPlay);
-        document.removeEventListener('touchstart', tryPlay);
-        document.removeEventListener('input', tryPlay);
-      };
-      // Попробовать сразу (может сработать если уже было взаимодействие)
-      audio.play().catch(()=>{
-        // Если браузер заблокировал — ждём первого клика/тача
-        document.addEventListener('click', tryPlay, {once:true});
-        document.addEventListener('keydown', tryPlay, {once:true});
-        document.addEventListener('touchstart', tryPlay, {once:true});
-        document.addEventListener('input', tryPlay, {once:true});
-      });
-    }
   }catch(e){}
-  setTimeout(()=>qs.classList.add('visible'), 400);
 }
 
-function showAuthScreen(){ document.getElementById('auth-screen').style.display='flex'; document.getElementById('nickname-screen').style.display='none'; document.getElementById('returning-screen').style.display='none'; initEntryQuickSettings(); }
+function showAuthScreen(){ document.getElementById('auth-screen').style.display='flex'; document.getElementById('nickname-screen').style.display='none'; document.getElementById('returning-screen').style.display='none'; applyEntryTheme(); }
 function showNickScreen(){ document.getElementById('auth-screen').style.display='none'; document.getElementById('nickname-screen').style.display='flex'; setTimeout(()=>document.getElementById('entry-nickname')?.focus(),200); }
 function showReturningScreen(name, sub){
   document.getElementById('auth-screen').style.display='none';
@@ -1227,7 +1101,7 @@ function showReturningScreen(name, sub){
   const guestBtn = document.getElementById('ret-guest-btn');
   if(guestBtn) guestBtn.onclick = ()=>{ playClick(); window._nitoqoUser = null; enterMain('гость'); };
 
-  initEntryQuickSettings();
+  applyEntryTheme();
 }
 
 window.signInWithGoogle = async function(){
