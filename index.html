@@ -1080,9 +1080,10 @@ window.eqSetVol = function(type, val){
     window._scpMusicVol = v;
     window._musicVol = v;
     if(window._bgGain) window._bgGain.gain.value = v * (window._allMuted ? 0 : 1);
-    // Применить к audio напрямую если играет на экране входа
-    if(typeof audio !== 'undefined' && audio && !audio.paused){
-      audio.volume = v * 0.6;
+    // Применить к audio — правильный уровень с учётом трека
+    if(typeof audio !== 'undefined' && audio){
+      const targetVol = typeof getMusicVol === 'function' ? getMusicVol(currentMusicSrc) : v * 0.6;
+      if(!audio.paused) audio.volume = targetVol;
     }
   } else {
     window._scpFxVol = v;
@@ -1091,10 +1092,20 @@ window.eqSetVol = function(type, val){
 };
 window.eqSetTheme = function(theme, el){
   document.querySelectorAll('.eq-dot').forEach(d=>d.classList.remove('active'));
-  el.classList.add('active');
+  if(el) el.classList.add('active');
   document.body.className = theme === 'default' ? '' : 'theme-'+theme;
   window._currentTheme = theme;
-  // Сохраним в state при следующем saveState, пока просто запомним
+  // Переключить музыку под тему
+  const newSrc = theme === 'teal' ? MUSIC_TEAL : theme === 'ash' ? MUSIC_ASH : MUSIC_DEFAULT;
+  if(typeof switchMusic === 'function' && newSrc !== currentMusicSrc){
+    switchMusic(newSrc);
+  } else if(typeof audio !== 'undefined' && audio){
+    // На экране входа — просто сменить src и запустить
+    const mv = window._scpMusicVol !== undefined ? window._scpMusicVol : 0.5;
+    audio.src = newSrc;
+    audio.volume = mv * 0.6;
+    audio.play().catch(()=>{});
+  }
   if(typeof saveState === 'function') saveState();
 };
 function initEntryQuickSettings(){
@@ -1122,18 +1133,23 @@ function initEntryQuickSettings(){
     const dot = document.getElementById('eq-dot-' + th);
     if(dot) dot.classList.add('active');
 
+    // Установить правильный трек под тему
+    const themeSrc = th === 'teal' ? MUSIC_TEAL : th === 'ash' ? MUSIC_ASH : MUSIC_DEFAULT;
+    currentMusicSrc = themeSrc;
+
     // Запустить музыку на экране входа (тихо)
     if(typeof audio !== 'undefined' && audio){
       window._scpMusicVol = mv;
       window._scpFxVol = fv;
-      audio.volume = mv * 0.6; // чуть тише чем в игре
+      audio.src = themeSrc;
+      audio.volume = mv * 0.6;
       audio.play().catch(()=>{});
     }
   }catch(e){}
   setTimeout(()=>qs.classList.add('visible'), 400);
 }
 
-function showAuthScreen(){ document.getElementById('auth-screen').style.display='flex'; document.getElementById('nickname-screen').style.display='none'; document.getElementById('returning-screen').style.display='none'; }
+function showAuthScreen(){ document.getElementById('auth-screen').style.display='flex'; document.getElementById('nickname-screen').style.display='none'; document.getElementById('returning-screen').style.display='none'; initEntryQuickSettings(); }
 function showNickScreen(){ document.getElementById('auth-screen').style.display='none'; document.getElementById('nickname-screen').style.display='flex'; setTimeout(()=>document.getElementById('entry-nickname')?.focus(),200); }
 function showReturningScreen(name, sub){
   document.getElementById('auth-screen').style.display='none';
