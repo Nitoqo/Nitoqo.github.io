@@ -559,7 +559,7 @@ async function _doSbSync(){
       achievements: d.achievements || [],
       site_time: d.siteTime || 0,
       sound_on: d.soundOn !== undefined ? d.soundOn : true,
-      rain_on: d.rainOn !== undefined ? d.rainOn : false,
+      rain_on: d.rainOn !== undefined ? d.rainOn : true,
       music_vol: d.musicVol !== undefined ? d.musicVol : 0.5,
       rain_vol: d.rainVol !== undefined ? d.rainVol : 0.7,
       fx_on: d.fxOn !== undefined ? d.fxOn : true,
@@ -725,23 +725,31 @@ const MUSIC_ASH = 'https://files.catbox.moe/eatuf0.mp3';
 const VOL_DEFAULT = 0.62;
 const VOL_TEAL = 0.42;
 let currentMusicSrc = MUSIC_DEFAULT;
+// предзагрузка всех треков в фоне
+(function(){
+  [MUSIC_DEFAULT, MUSIC_TEAL, MUSIC_ASH].forEach(function(src){
+    if(src === MUSIC_DEFAULT) return; // текущий уже грузится
+    var a = new Audio(); a.preload = 'auto'; a.src = src;
+    window._preloadedAudio = window._preloadedAudio || {};
+    window._preloadedAudio[src] = a;
+  });
+})();
 audio.src = MUSIC_DEFAULT;
 audio.volume = 0;
 audio.preload = 'auto';
 let musicFadeInterval = null;
+const VOL_ASH = 0.55;
 function getMusicVol(src){
-  const base = src.includes('zbspew') ? VOL_TEAL : VOL_DEFAULT;
+  const base = src === MUSIC_TEAL ? VOL_TEAL : src === MUSIC_ASH ? VOL_ASH : VOL_DEFAULT;
   return base * (window._scpMusicVol !== undefined ? window._scpMusicVol : 0.5);
 }
 function switchMusic(src){
 if(musicFadeInterval){ clearInterval(musicFadeInterval); musicFadeInterval = null; }
-if(currentMusicSrc.includes('ll7yo4'))window._posDefault = audio.currentTime;
-if(currentMusicSrc.includes('zbspew'))window._posTeal = audio.currentTime;
-if(currentMusicSrc.includes('s8in6u'))window._posAsh = audio.currentTime;
-const resumeAt = src.includes('ll7yo4')?(window._posDefault || 0)
-: src.includes('zbspew')?(window._posTeal || 0)
-: src.includes('s8in6u')?(window._posAsh || 0)
-: 0;
+// сохраняем позицию текущего трека
+window._musicPos = window._musicPos || {};
+if(currentMusicSrc) window._musicPos[currentMusicSrc] = audio.currentTime;
+// восстанавливаем позицию если уже слушали этот трек
+const resumeAt = (window._musicPos && window._musicPos[src]) || 0;
 const targetVol = getMusicVol(src);
 currentMusicSrc = src;
 if(!soundOn){
